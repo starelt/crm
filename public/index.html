@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StarElectronic - WhatsApp CRM</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (Lista de Chats) -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <div class="brand-info" style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                    <!-- Foto de perfil clickeable -->
+                    <div class="brand-avatar" id="brand-avatar" title="Cambiar Logo" style="cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background-color: #dfe5e7; display: flex; justify-content: center; align-items: center; overflow: hidden; background-size: cover; background-position: center;">
+                        <span id="brand-avatar-initial" style="font-weight: bold; color: white;">S</span>
+                    </div>
+                    <!-- Input file oculto -->
+                    <input type="file" id="logo-upload" accept="image/*" style="display: none;">
+                    
+                    <!-- Nombre editable -->
+                    <h2 id="brand-name" contenteditable="true" spellcheck="false" title="Haz clic para editar" style="font-size: 16px; margin: 0; flex: 1; outline: none; border-bottom: 1px dashed transparent; transition: border 0.3s;">StarElectronic CRM</h2>
+                    
+                    <!-- Botón Técnicos -->
+                    <button id="btn-manage-techs" title="Gestión de Técnicos" style="background: none; border: none; cursor: pointer; color: #54656f;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
+                    </button>
+                </div>
+            </header>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Buscar chat...">
+                <select id="tag-filter" style="width: 100%; margin-top: 5px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; background: #f0f2f5;">
+                    <option value="">Todas las etiquetas (Sin Filtro)</option>
+                    <!-- Opciones dinámicas -->
+                </select>
+            </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Los chats se inyectarán aquí con JS -->
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            <!-- Estado cuando no hay chat seleccionado -->
+            <div class="no-chat-selected" id="no-chat-selected">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/512px-WhatsApp.svg.png" alt="WhatsApp">
+                <h1>WhatsApp CRM Web</h1>
+                <p>Selecciona un chat de la izquierda para empezar a responder.</p>
+            </div>
+
+            <!-- Panel de chat activo -->
+            <div class="active-chat" id="active-chat" style="display: none;">
+                <header class="chat-header">
+                    <div class="contact-info">
+                        <div class="avatar" id="active-avatar">C</div>
+                        <h3 id="active-contact-name">+1809...</h3>
+                        <div id="active-tech-assigned" style="margin-left: 10px; font-size: 12px; color: #00a884; font-weight: bold;"></div>
+                    </div>
+                    <div class="chat-tags-header" id="active-tags-container" style="display: flex; gap: 5px; margin-left: 15px; align-items: center; flex: 1;">
+                        <!-- Tags del chat activo aquí -->
+                    </div>
+                    
+                    <!-- Botón Asignar Técnico -->
+                    <button id="btn-assign-tech" style="background: #00a884; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 10px;">
+                        Asignar Técnico
+                    </button>
+
+                    <!-- Botón Etiquetas -->
+                    <button id="btn-add-tag" style="background: none; border: none; cursor: pointer; color: #54656f;" title="Agregar Etiqueta">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"></path></svg>
+                    </button>
+                </header>
+
+                <div class="messages-container" id="messages-container">
+                    <!-- Los mensajes se inyectarán aquí con JS -->
+                </div>
+
+                <footer class="chat-input-area">
+                    <input type="text" id="message-input" placeholder="Escribe un mensaje aquí...">
+                    <button id="send-button">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Etiquetas -->
+    <div id="tag-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3 style="margin-bottom: 15px;">Asignar Etiqueta</h3>
+            <label style="display: block; margin-bottom: 5px;">Nombre de la Etiqueta (Ej: AVERIA)</label>
+            <input type="text" id="tag-name-input" style="width: 100%; padding: 8px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc;">
+            
+            <label style="display: block; margin-bottom: 5px;">Color de la Etiqueta</label>
+            <input type="color" id="tag-color-input" value="#ff0000" style="width: 100%; height: 40px; margin-bottom: 20px; cursor: pointer; border: none;">
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btn-cancel-tag" class="btn-secondary">Cancelar</button>
+                <button id="btn-save-tag" class="btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gestión de Técnicos -->
+    <div id="tech-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="width: 500px;">
+            <h3 style="margin-bottom: 15px;">Gestión de Técnicos</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="tech-name" placeholder="Nombre" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <input type="text" id="tech-phone" placeholder="WhatsApp (Ej: 1809...)" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <input type="text" id="tech-brigade" placeholder="Brigada" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <button id="btn-add-tech" class="btn-primary">Añadir</button>
+            </div>
+            <div id="tech-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9edef; border-radius: 4px;">
+                <!-- Lista de técnicos -->
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button id="btn-close-techs" class="btn-secondary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Asignar Ticket -->
+    <div id="assign-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3 style="margin-bottom: 15px;">Asignar a Técnico</h3>
+            <p style="margin-bottom: 15px; font-size: 14px; color: #54656f;">Selecciona un técnico para despacharle este caso. Se le enviará un WhatsApp automático.</p>
+            <div id="assign-tech-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9edef; border-radius: 4px;">
+                <!-- Lista para asignar -->
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button id="btn-cancel-assign" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
