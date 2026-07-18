@@ -3,142 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StarElectronic - WhatsApp CRM</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>StarElectronic CRM - WhatsApp Business</title>
+    <meta name="description" content="CRM profesional para gestión de clientes vía WhatsApp Business API">
+    <link rel="stylesheet" href="styles.v2.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:red; color:white; padding:20px; z-index:999999; font-family:monospace; white-space:pre-wrap; max-height: 50vh; overflow-y:auto;';
+            errDiv.innerHTML = `<strong>CRITICAL JS ERROR:</strong><br><br>${message}<br>Source: ${source}<br>Line: ${lineno}:${colno}<br><br>${error ? error.stack : ''}`;
+            document.body.appendChild(errDiv);
+            return false;
+        };
+        window.addEventListener("unhandledrejection", function(e) {
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:darkred; color:white; padding:20px; z-index:999999; font-family:monospace; white-space:pre-wrap; max-height: 50vh; overflow-y:auto;';
+            errDiv.innerHTML = `<strong>UNHANDLED PROMISE REJECTION:</strong><br><br>${e.reason ? e.reason.message : 'Unknown'}<br><br>${e.reason ? e.reason.stack : ''}`;
+            document.body.appendChild(errDiv);
+        });
+    </script>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar (Lista de Chats) -->
-        <aside class="sidebar">
-            <header class="sidebar-header">
-                <div class="brand-info" style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                    <!-- Foto de perfil clickeable -->
-                    <div class="brand-avatar" id="brand-avatar" title="Cambiar Logo" style="cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background-color: #dfe5e7; display: flex; justify-content: center; align-items: center; overflow: hidden; background-size: cover; background-position: center;">
-                        <span id="brand-avatar-initial" style="font-weight: bold; color: white;">S</span>
-                    </div>
-                    <!-- Input file oculto -->
-                    <input type="file" id="logo-upload" accept="image/*" style="display: none;">
-                    
-                    <!-- Nombre editable -->
-                    <h2 id="brand-name" contenteditable="true" spellcheck="false" title="Haz clic para editar" style="font-size: 16px; margin: 0; flex: 1; outline: none; border-bottom: 1px dashed transparent; transition: border 0.3s;">StarElectronic CRM</h2>
-                    
-                    <!-- Botón Técnicos -->
-                    <button id="btn-manage-techs" title="Gestión de Técnicos" style="background: none; border: none; cursor: pointer; color: #54656f;">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
+    <div class="crm-root">
+
+        <!-- ===================== NAV RAIL (Iconos) ===================== -->
+        <nav class="nav-rail" id="nav-rail">
+            <div class="nav-logo" id="nav-logo-btn" title="Cambiar logo">
+                <div class="logo-avatar" id="logo-avatar"><span id="logo-initial">S</span></div>
+                <input type="file" id="logo-upload" accept="image/*" style="display:none">
+            </div>
+            <div class="nav-divider"></div>
+            <ul class="nav-items">
+                <li class="nav-item active" data-section="chats" title="Chats">
+                    <span class="material-symbols-rounded">chat</span>
+                    <span class="nav-label">Chats</span>
+                </li>
+                <li class="nav-item" data-section="contacts" title="Contactos">
+                    <span class="material-symbols-rounded">contacts</span>
+                    <span class="nav-label">Contactos</span>
+                </li>
+                <li class="nav-item" data-section="labels" title="Etiquetas">
+                    <span class="material-symbols-rounded">label</span>
+                    <span class="nav-label">Etiquetas</span></li>
+                <li class="nav-item" data-section="staff" title="Staff">
+                    <span class="material-symbols-rounded">groups</span>
+                    <span class="nav-label">Staff</span>
+                </li>
+                <li class="nav-item" data-section="quick-responses" title="Respuestas Rápidas">
+                    <span class="material-symbols-rounded">bolt</span>
+                    <span class="nav-label">Rápidas</span>
+                </li>
+            </ul>
+            <div class="nav-bottom">
+                <li class="nav-item" data-section="settings" title="Configuración">
+                    <span class="material-symbols-rounded">settings</span>
+                    <span class="nav-label">Config</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- ===================== SIDEBAR (Lista de conversaciones) ===================== -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Header sidebar con nombre editable -->
+            <div class="sidebar-top">
+                <div class="sidebar-brand">
+                    <h2 id="brand-name" contenteditable="true" spellcheck="false" title="Clic para editar">StarElectronic CRM</h2>
+                </div>
+                <div class="sidebar-actions">
+                    <button class="icon-btn" id="btn-new-tag" title="Nueva Etiqueta">
+                        <span class="material-symbols-rounded">sell</span>
+                    </button>
+                    <button class="icon-btn" id="btn-manage-techs" title="Gestión de Técnicos">
+                        <span class="material-symbols-rounded">engineering</span>
                     </button>
                 </div>
-            </header>
-            <div class="search-bar">
-                <input type="text" id="search-input" placeholder="Buscar chat...">
-                <select id="tag-filter" style="width: 100%; margin-top: 5px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; background: #f0f2f5;">
-                    <option value="">Todas las etiquetas (Sin Filtro)</option>
-                    <!-- Opciones dinámicas -->
-                </select>
             </div>
+
+            <!-- Buscador -->
+            <div class="sidebar-header" style="padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 16px;">Chats</h2>
+                <button class="icon-btn" id="btn-filter-unread" title="Mensajes No Leídos"><span class="material-symbols-rounded">filter_list</span></button>
+            </div>
+            
+            <div class="search-wrap">
+                <span class="material-symbols-rounded search-icon">search</span>
+                <input type="text" id="search-input" placeholder="Buscar conversación...">
+            </div>
+
+            <!-- Filtros de etiquetas (chips) -->
+            <div class="label-chips" id="label-chips">
+                <button class="chip active" data-tag="">Todas</button>
+            </div>
+
+            <!-- Lista de chats -->
             <div class="chat-list" id="chat-list">
-                <!-- Los chats se inyectarán aquí con JS -->
+                <div class="loading-chats">
+                    <div class="spinner"></div>
+                    <p>Cargando conversaciones...</p>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Chat Area -->
-        <main class="chat-area">
-            <!-- Estado cuando no hay chat seleccionado -->
-            <div class="no-chat-selected" id="no-chat-selected">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/512px-WhatsApp.svg.png" alt="WhatsApp">
-                <h1>WhatsApp CRM Web</h1>
-                <p>Selecciona un chat de la izquierda para empezar a responder.</p>
-            </div>
+        <!-- ===================== ÁREA PRINCIPAL ===================== -->
+        <main class="main-content">
 
-            <!-- Panel de chat activo -->
-            <div class="active-chat" id="active-chat" style="display: none;">
-                <header class="chat-header">
-                    <div class="contact-info">
-                        <div class="avatar" id="active-avatar">C</div>
-                        <h3 id="active-contact-name">+1809...</h3>
-                        <div id="active-tech-assigned" style="margin-left: 10px; font-size: 12px; color: #00a884; font-weight: bold;"></div>
+            <!-- ===== SECCIÓN CHATS ===== -->
+            <section class="section active" id="section-chats">
+                <!-- Estado vacío -->
+                <div class="empty-state" id="no-chat-selected">
+                    <div class="empty-icon">
+                        <span class="material-symbols-rounded">forum</span>
                     </div>
-                    <div class="chat-tags-header" id="active-tags-container" style="display: flex; gap: 5px; margin-left: 15px; align-items: center; flex: 1;">
-                        <!-- Tags del chat activo aquí -->
+                    <h2>Bienvenido al CRM</h2>
+                    <p>Selecciona una conversación de la izquierda para comenzar a responder a tus clientes.</p>
+                    <div class="stats-row" id="stats-row">
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-total">0</span>
+                            <span class="stat-lbl">Conversaciones</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-staff">0</span>
+                            <span class="stat-lbl">Staff Activo</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-labels">0</span>
+                            <span class="stat-lbl">Etiquetas</span>
+                        </div>
                     </div>
-                    
-                    <!-- Botón Asignar Técnico -->
-                    <button id="btn-assign-tech" style="background: #00a884; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 10px;">
-                        Asignar Técnico
-                    </button>
-
-                    <!-- Botón Etiquetas -->
-                    <button id="btn-add-tag" style="background: none; border: none; cursor: pointer; color: #54656f;" title="Agregar Etiqueta">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"></path></svg>
-                    </button>
-                </header>
-
-                <div class="messages-container" id="messages-container">
-                    <!-- Los mensajes se inyectarán aquí con JS -->
                 </div>
 
-                <footer class="chat-input-area">
-                    <input type="text" id="message-input" placeholder="Escribe un mensaje aquí...">
-                    <button id="send-button">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                        </svg>
+            <!-- ===== SECCIÓN CONTACTOS ===== -->
+            <section class="section" id="section-contacts">
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>Contactos</h1>
+                        <p>Lista completa de todos tus clientes</p>
+                    </div>
+                    <button class="btn-primary" id="btn-new-contact">
+                        <span class="material-symbols-rounded">person_add</span> Nuevo Contacto
                     </button>
-                </footer>
-            </div>
+                </div>
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table" id="contacts-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Etiquetas</th>
+                                <th>Asignado a</th>
+                                <th>Último mensaje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contacts-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+                <!-- Chat activo -->
+                <div class="active-chat" id="active-chat" style="display:none;">
+                    <header class="chat-topbar">
+                        <div class="chat-contact">
+                            <div class="avatar lg" id="active-avatar">C</div>
+                            <div class="contact-meta">
+                                <h3 id="active-name">Contacto</h3>
+                                <span id="active-status" class="status-text">en línea</span>
+                            </div>
+                        </div>
+                        <div class="chat-tags-bar" id="active-tags-bar"></div>
+                        <div class="chat-topbar-actions">
+                            <button class="icon-btn" id="btn-assign-tech" title="Asignar Técnico">
+                                <span class="material-symbols-rounded">handyman</span>
+                            </button>
+                            <button class="icon-btn" id="btn-add-tag" title="Agregar Etiqueta">
+                                <span class="material-symbols-rounded">sell</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="messages-area" id="messages-container"></div>
+
+                    <footer class="chat-composer" style="position: relative;">
+                        <!-- Menú flotante de Respuestas Rápidas -->
+                        <div id="qr-popup-menu" style="display:none; position: absolute; bottom: 100%; left: 16px; margin-bottom: 8px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 300px; max-height: 250px; overflow-y: auto; z-index: 100;">
+                            <div style="padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-weight: 600; font-size: 13px;">Respuestas Rápidas</div>
+                            <div id="qr-popup-list"></div>
+                        </div>
+
+                        <button class="icon-btn" id="btn-open-qr" title="Respuestas Rápidas">
+                            <span class="material-symbols-rounded" style="color: #f59e0b;">bolt</span>
+                        </button>
+                        <button class="icon-btn" id="btn-emoji" title="Emoji">
+                            <span class="material-symbols-rounded">mood</span>
+                        </button>
+                        <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+                        <button class="send-btn" id="send-button" title="Enviar">
+                            <span class="material-symbols-rounded">send</span>
+                        </button>
+                    </footer>
+                </div>
+            </section>
+
+
+
+            <!-- ===== SECCIÓN ETIQUETAS ===== -->
+            <section class="section" id="section-labels">
+                <div class="section-header">
+                    <h1>Etiquetas</h1>
+                    <p>Gestiona las etiquetas para clasificar a tus clientes</p>
+                    <button class="btn-primary" id="btn-create-label">
+                        <span class="material-symbols-rounded">add</span> Nueva Etiqueta
+                    </button>
+                </div>
+                <div class="labels-grid" id="labels-grid"></div>
+            </section>
+
+            <!-- ===== SECCIÓN STAFF ===== -->
+            <section class="section" id="section-staff">
+                <div class="section-header">
+                    <h1>Gestión de Staff</h1>
+                    <p>Administra tus técnicos y su carga de trabajo</p>
+                </div>
+                <div class="staff-add-form" id="staff-form">
+                    <h3>Agregar Técnico</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre completo</label>
+                            <input type="text" id="tech-name" placeholder="Ej: Carlos Martínez">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="text" id="tech-phone" placeholder="Ej: 18095551234">
+                        </div>
+                        <div class="form-group">
+                            <label>Brigada / Área</label>
+                            <input type="text" id="tech-brigade" placeholder="Ej: Brigada Norte">
+                        </div>
+                        <button class="btn-primary" id="btn-add-tech">
+                            <span class="material-symbols-rounded">person_add</span> Agregar
+                        </button>
+                    </div>
+                </div>
+                <div class="staff-grid" id="staff-grid"></div>
+            </section>
+
+            <!-- ===== SECCIÓN RESPUESTAS RÁPIDAS ===== -->
+            <section class="section" id="section-quick-responses">
+                <div class="section-header">
+                    <h1>Respuestas Rápidas</h1>
+                    <p>Plantillas de texto para responder ágilmente a tus clientes</p>
+                    <button class="btn-primary" id="btn-new-qr" style="margin-top: 10px; width: fit-content;">
+                        <span class="material-symbols-rounded">add</span> Agregar Respuesta
+                    </button>
+                </div>
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table" id="qr-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Mensaje</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qr-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ===== SECCIÓN CONFIGURACIÓN ===== -->
+            <section class="section" id="section-settings">
+                <div class="section-header">
+                    <h1>Configuración</h1>
+                    <p>Personaliza tu CRM</p>
+                </div>
+                <div class="settings-card">
+                    <h3>Perfil de la Empresa</h3>
+                    <div class="settings-form">
+                        <div class="profile-pic-section">
+                            <div class="big-avatar" id="settings-avatar" title="Cambiar foto">
+                                <span id="settings-avatar-initial">S</span>
+                                <div class="avatar-overlay"><span class="material-symbols-rounded">photo_camera</span></div>
+                            </div>
+                            <input type="file" id="settings-logo-upload" accept="image/*" style="display:none">
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre de la Empresa</label>
+                            <input type="text" id="settings-brand-name" placeholder="StarElectronic CRM">
+                        </div>
+                        <button class="btn-primary" id="btn-save-settings">Guardar Cambios</button>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
-    <!-- Modal para Etiquetas -->
-    <div id="tag-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-box">
-            <h3 style="margin-bottom: 15px;">Asignar Etiqueta</h3>
-            <label style="display: block; margin-bottom: 5px;">Nombre de la Etiqueta (Ej: AVERIA)</label>
-            <input type="text" id="tag-name-input" style="width: 100%; padding: 8px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc;">
-            
-            <label style="display: block; margin-bottom: 5px;">Color de la Etiqueta</label>
-            <input type="color" id="tag-color-input" value="#ff0000" style="width: 100%; height: 40px; margin-bottom: 20px; cursor: pointer; border: none;">
-            
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button id="btn-cancel-tag" class="btn-secondary">Cancelar</button>
-                <button id="btn-save-tag" class="btn-primary">Guardar</button>
+    <!-- ============ MODALES ============ -->
+
+    <!-- Modal Contacto -->
+    <div id="contact-modal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Nuevo Contacto</h3>
+                <button class="icon-btn" id="btn-cancel-contact-top"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre del Contacto</label>
+                    <input type="text" id="contact-name-input" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="form-group">
+                    <label>Número de WhatsApp (con código de país)</label>
+                    <input type="text" id="contact-phone-input" placeholder="Ej: 18094453148">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btn-cancel-contact">Cancelar</button>
+                <button class="btn-primary" id="btn-save-contact">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Gestión de Técnicos -->
-    <div id="tech-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-box" style="width: 500px;">
-            <h3 style="margin-bottom: 15px;">Gestión de Técnicos</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <input type="text" id="tech-name" placeholder="Nombre" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                <input type="text" id="tech-phone" placeholder="WhatsApp (Ej: 1809...)" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                <input type="text" id="tech-brigade" placeholder="Brigada" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                <button id="btn-add-tech" class="btn-primary">Añadir</button>
+    <!-- Modal Etiqueta -->
+    <div id="tag-modal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Asignar Etiqueta</h3>
+                <button class="icon-btn" id="btn-cancel-tag"><span class="material-symbols-rounded">close</span></button>
             </div>
-            <div id="tech-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9edef; border-radius: 4px;">
-                <!-- Lista de técnicos -->
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre de la etiqueta</label>
+                    <input type="text" id="tag-name-input" placeholder="Ej: AVERIA, PAGO PENDIENTE...">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <div class="color-presets">
+                        <button class="color-preset" data-color="#e53935" style="background:#e53935"></button>
+                        <button class="color-preset" data-color="#8e24aa" style="background:#8e24aa"></button>
+                        <button class="color-preset" data-color="#1e88e5" style="background:#1e88e5"></button>
+                        <button class="color-preset" data-color="#00897b" style="background:#00897b"></button>
+                        <button class="color-preset" data-color="#f4511e" style="background:#f4511e"></button>
+                        <button class="color-preset" data-color="#43a047" style="background:#43a047"></button>
+                        <button class="color-preset" data-color="#fb8c00" style="background:#fb8c00"></button>
+                        <button class="color-preset" data-color="#6d4c41" style="background:#6d4c41"></button>
+                    </div>
+                    <input type="color" id="tag-color-input" value="#e53935" style="margin-top:10px; width:100%; height:36px; border:1px solid #e0e0e0; border-radius:6px; cursor:pointer;">
+                </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <button id="btn-close-techs" class="btn-secondary">Cerrar</button>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btn-cancel-tag2">Cancelar</button>
+                <button class="btn-primary" id="btn-save-tag">Guardar Etiqueta</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Asignar Ticket -->
-    <div id="assign-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-box">
-            <h3 style="margin-bottom: 15px;">Asignar a Técnico</h3>
-            <p style="margin-bottom: 15px; font-size: 14px; color: #54656f;">Selecciona un técnico para despacharle este caso. Se le enviará un WhatsApp automático.</p>
-            <div id="assign-tech-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9edef; border-radius: 4px;">
-                <!-- Lista para asignar -->
+    <!-- Modal Respuesta Rápida -->
+    <div id="qr-modal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="qr-modal-title">Agregar Respuesta</h3>
+                <button class="icon-btn" id="btn-close-qr-modal"><span class="material-symbols-rounded">close</span></button>
             </div>
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <button id="btn-cancel-assign" class="btn-secondary">Cancelar</button>
+            <div class="modal-body">
+                <input type="hidden" id="qr-id">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" id="qr-name" placeholder="Ej: saludo_inicial">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="qr-type" style="padding: 9px 12px; border-radius: 6px; border: 1px solid var(--border); outline: none; background: var(--bg-base); font-family: inherit; font-size: 13px;">
+                        <option value="Personal">Personal</option>
+                        <option value="Ventas">Ventas</option>
+                        <option value="Soporte">Soporte</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Mensaje *</label>
+                    <textarea id="qr-message" rows="5" placeholder="Escribe tu mensaje aquí..." style="padding: 9px 12px; border-radius: 6px; border: 1px solid var(--border); outline: none; background: var(--bg-base); font-family: inherit; font-size: 13px; resize: vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btn-cancel-qr">Cancelar</button>
+                <button class="btn-primary" id="btn-save-qr">Guardar</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Selector de Respuesta Rápida -->
+    <div id="qr-selector-modal" class="modal-overlay" style="display:none; z-index: 1000;">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Insertar Respuesta Rápida</h3>
+                <button class="icon-btn" id="btn-close-qr-selector"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="qr-selector-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Se inyectan las respuestas rápidas aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales anteriores -->
+    <!-- Modal Nueva Etiqueta Global -->
+    <div id="create-label-modal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Crear Etiqueta Global</h3>
+                <button class="icon-btn" id="btn-close-label-modal"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre de la etiqueta</label>
+                    <input type="text" id="new-label-name" placeholder="Ej: URGENCE, VIP...">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <div class="color-presets">
+                        <button class="color-preset" data-color="#e53935" style="background:#e53935"></button>
+                        <button class="color-preset" data-color="#8e24aa" style="background:#8e24aa"></button>
+                        <button class="color-preset" data-color="#1e88e5" style="background:#1e88e5"></button>
+                        <button class="color-preset" data-color="#00897b" style="background:#00897b"></button>
+                        <button class="color-preset" data-color="#f4511e" style="background:#f4511e"></button>
+                        <button class="color-preset" data-color="#43a047" style="background:#43a047"></button>
+                        <button class="color-preset" data-color="#fb8c00" style="background:#fb8c00"></button>
+                        <button class="color-preset" data-color="#6d4c41" style="background:#6d4c41"></button>
+                    </div>
+                    <input type="color" id="new-label-color" value="#e53935" style="margin-top:10px; width:100%; height:36px; border:1px solid #e0e0e0; border-radius:6px; cursor:pointer;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btn-cancel-label">Cancelar</button>
+                <button class="btn-primary" id="btn-save-label">Crear Etiqueta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles del Técnico (Asignaciones) -->
+    <div id="tech-details-modal" class="modal-overlay" style="display:none">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3>Asignaciones de <span id="td-tech-name">Técnico</span></h3>
+                <button class="icon-btn" id="btn-close-tech-details"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="modal-body" style="background:#f8f9fc; padding: 20px;">
+                <div id="tech-assignments-grid" class="assignments-grid">
+                    <!-- Cards de asignaciones -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/picmo@latest/dist/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@picmo/popup-picker@latest/dist/umd/index.js"></script>
+    <script src="app.v2.js"></script>
 </body>
 </html>
