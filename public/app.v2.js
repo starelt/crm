@@ -1,4 +1,4 @@
-﻿// =====================================================
+// =====================================================
 // StarElectronic CRM - Professional App Logic
 // =====================================================
 
@@ -19,33 +19,132 @@ if(document.getElementById('btn-filter-unread')) document.getElementById('btn-fi
     renderChatList();
 });
 
-// Nuevo contacto manual
+// ===== NUEVO / EDITAR CONTACTO =====
 const contactModal = document.getElementById('contact-modal');
-if(document.getElementById('btn-new-contact')) document.getElementById('btn-new-contact').addEventListener('click', () => contactModal.style.display = 'flex');
+let currentContactAvatarUrl = null;
+
+const avatarFileInput = document.getElementById('contact-avatar-file');
+if (avatarFileInput) {
+    avatarFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                currentContactAvatarUrl = evt.target.result;
+                const previewEl = document.getElementById('contact-avatar-preview');
+                if (previewEl) {
+                    previewEl.innerHTML = `<img src="${currentContactAvatarUrl}" style="width:100%; height:100%; object-fit:cover;" />`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+function openContactModal(phone = '') {
+    const titleEl = document.getElementById('contact-modal-title');
+    const fNameEl = document.getElementById('contact-firstname-input');
+    const lNameEl = document.getElementById('contact-lastname-input');
+    const phoneEl = document.getElementById('contact-phone-input');
+    const locEl = document.getElementById('contact-location-input');
+
+    const usernameEl = document.getElementById('contact-username-input');
+
+    if (!phone) {
+        if (titleEl) titleEl.textContent = 'Nuevo Contacto';
+        fNameEl.value = '';
+        lNameEl.value = '';
+        phoneEl.value = '';
+        if (usernameEl) usernameEl.value = '';
+        locEl.value = '';
+        currentContactAvatarUrl = null;
+        phoneEl.removeAttribute('readonly');
+    } else {
+        if (titleEl) titleEl.textContent = 'Editar Contacto';
+        const chat = allChats.find(c => c.phone === phone) || { phone: phone };
+        
+        let fName = chat.firstName || '';
+        let lName = chat.lastName || '';
+        if (!fName && !lName && chat.name) {
+            const parts = chat.name.split(' ');
+            fName = parts[0] || '';
+            lName = parts.slice(1).join(' ') || '';
+        }
+
+        fNameEl.value = fName;
+        lNameEl.value = lName;
+        phoneEl.value = chat.phone;
+        if (usernameEl) usernameEl.value = chat.username || '';
+        locEl.value = chat.coordinates || chat.address || chat.locationUrl || '';
+        currentContactAvatarUrl = chat.avatarUrl || null;
+    }
+
+    const previewEl = document.getElementById('contact-avatar-preview');
+    if (previewEl) {
+        if (currentContactAvatarUrl) {
+            previewEl.innerHTML = `<img src="${currentContactAvatarUrl}" style="width:100%; height:100%; object-fit:cover;" />`;
+        } else {
+            previewEl.innerHTML = `<span class="material-symbols-rounded" style="color:#757575;">person</span>`;
+        }
+    }
+    if (avatarFileInput) avatarFileInput.value = '';
+
+    contactModal.style.display = 'flex';
+}
+
+if(document.getElementById('btn-new-contact')) document.getElementById('btn-new-contact').addEventListener('click', () => openContactModal(''));
+if(document.getElementById('btn-edit-contact')) document.getElementById('btn-edit-contact').addEventListener('click', () => {
+    if (activeChat) openContactModal(activeChat);
+    else showToast('Selecciona una conversación primero', 'error');
+});
 if(document.getElementById('btn-cancel-contact')) document.getElementById('btn-cancel-contact').addEventListener('click', () => contactModal.style.display = 'none');
 if(document.getElementById('btn-cancel-contact-top')) document.getElementById('btn-cancel-contact-top').addEventListener('click', () => contactModal.style.display = 'none');
 
 if(document.getElementById('btn-save-contact')) document.getElementById('btn-save-contact').addEventListener('click', async () => {
-    const name = document.getElementById('contact-name-input').value.trim();
+    const firstName = document.getElementById('contact-firstname-input').value.trim();
+    const lastName = document.getElementById('contact-lastname-input').value.trim();
     const phone = document.getElementById('contact-phone-input').value.trim();
-    if (!name || !phone) return showToast('Nombre y teléfono son obligatorios', 'error');
+    const username = document.getElementById('contact-username-input') ? document.getElementById('contact-username-input').value.trim() : '';
+    const location = document.getElementById('contact-location-input').value.trim();
+
+    if (!firstName && !lastName && !username) return showToast('Ingresa al menos un nombre, apellido o usuario (@username)', 'error');
+    if (!phone) return showToast('El número de WhatsApp o ID es obligatorio', 'error');
 
     document.getElementById('btn-save-contact').textContent = 'Guardando...';
+
+    let coordinates = '';
+    let address = '';
+    if (location) {
+        if (/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(location) || location.startsWith('http')) {
+            coordinates = location;
+        } else {
+            address = location;
+        }
+    }
+
     try {
-        await fetch('/api/contacts', {
+        const res = await fetch('/api/contacts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, phone })
+            body: JSON.stringify({ phone, firstName, lastName, username, address, coordinates, avatarUrl: currentContactAvatarUrl })
         });
-        contactModal.style.display = 'none';
-        document.getElementById('contact-name-input').value = '';
-        document.getElementById('contact-phone-input').value = '';
-        showToast('Contacto guardado exitosamente', 'success');
-        loadData();
+        const data = await res.json();
+        if (res.ok) {
+            contactModal.style.display = 'none';
+            showToast('Contacto guardado exitosamente', 'success');
+
+            await loadData();
+            if (activeChat === data.phone || activeChat === phone) {
+                const updated = allChats.find(c => c.phone === (data.phone || phone));
+                if (updated) selectChat(updated);
+            }
+        } else {
+            showToast(data.error || 'Error al guardar contacto', 'error');
+        }
     } catch (e) {
         showToast('Error al guardar contacto', 'error');
     } finally {
-        document.getElementById('btn-save-contact').textContent = 'Guardar';
+        document.getElementById('btn-save-contact').textContent = 'Guardar Contacto';
     }
 });
 
@@ -131,19 +230,34 @@ if(document.getElementById('btn-save-settings')) document.getElementById('btn-sa
     showToast('Configuración guardada', 'success');
 });
 
+let lastSync = 0;
 // ===== CARGA DE DATOS =====
 async function loadData() {
     try {
         const [chatsRes, techsRes] = await Promise.all([
-            fetch('/api/chats').catch(() => null),
+            fetch(`/api/chats?since=${lastSync}`).catch(() => null),
             fetch('/api/technicians').catch(() => null)
         ]);
         
-        allChats = (chatsRes && chatsRes.ok) ? await chatsRes.json() : [];
-        allTechs = (techsRes && techsRes.ok) ? await techsRes.json() : [];
+        const newChats = (chatsRes && chatsRes.ok) ? await chatsRes.json() : null;
+        const newTechs = (techsRes && techsRes.ok) ? await techsRes.json() : null;
         
-        if (!Array.isArray(allChats)) allChats = [];
-        if (!Array.isArray(allTechs)) allTechs = [];
+        if (newChats && Array.isArray(newChats)) {
+            newChats.forEach(newChat => {
+                const idx = allChats.findIndex(c => c.phone === newChat.phone);
+                if (idx >= 0) allChats[idx] = newChat;
+                else allChats.push(newChat);
+                
+                if (newChat.lastUpdated > lastSync) {
+                    lastSync = newChat.lastUpdated;
+                }
+            });
+            allChats.sort((a, b) => b.lastUpdated - a.lastUpdated);
+        }
+        
+        if (newTechs && Array.isArray(newTechs)) {
+            allTechs = newTechs;
+        }
 
         updateStats();
         renderChips();
@@ -196,6 +310,19 @@ function renderChips() {
     allChip.addEventListener('click', () => { activeFilter = ''; renderChips(); renderChatList(); });
     chipsEl.appendChild(allChip);
 
+    const unreadChip = document.createElement('button');
+    unreadChip.className = `chip ${current === '__unread__' ? 'active' : ''}`;
+    unreadChip.textContent = 'No leídos';
+    unreadChip.dataset.tag = '__unread__';
+    unreadChip.style.setProperty('--chip-color', '#0284c7');
+    if (current === '__unread__') {
+        unreadChip.style.background = '#0284c7';
+        unreadChip.style.borderColor = '#0284c7';
+        unreadChip.style.color = 'white';
+    }
+    unreadChip.addEventListener('click', () => { activeFilter = '__unread__'; renderChips(); renderChatList(); });
+    chipsEl.appendChild(unreadChip);
+
     tags.forEach(tagJson => {
         const tag = JSON.parse(tagJson);
         const chip = document.createElement('button');
@@ -225,11 +352,12 @@ function renderChatList() {
     const showOnlyUnread = document.getElementById('btn-filter-unread').classList.contains('active');
 
     let filtered = allChats.filter(c => {
-        const matchTag = !activeFilter || c.tags?.some(t => t.name === activeFilter);
+        const isUnreadFilter = activeFilter === '__unread__';
+        const matchTag = !activeFilter || isUnreadFilter || c.tags?.some(t => t.name === activeFilter);
         const name = (c.name || c.phone || '').toLowerCase();
         const phone = (c.phone || '').toLowerCase();
         const matchSearch = !search || name.includes(search) || phone.includes(search);
-        const matchUnread = !showOnlyUnread || (c.unreadCount && c.unreadCount > 0);
+        const matchUnread = isUnreadFilter ? (c.unreadCount && c.unreadCount > 0) : (!showOnlyUnread || (c.unreadCount && c.unreadCount > 0));
         return matchTag && matchSearch && matchUnread;
     });
 
@@ -240,13 +368,18 @@ function renderChatList() {
 
     chatListEl.innerHTML = '';
     filtered.forEach(chat => {
-        const date = new Date(chat.lastUpdated);
-        const now = new Date();
-        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-        let timeStr;
-        if (diffDays === 0) timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        else if (diffDays === 1) timeStr = 'Ayer';
-        else timeStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+        let timeStr = '';
+        if (chat.lastUpdated) {
+            const date = new Date(chat.lastUpdated);
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (!isNaN(date.getTime())) {
+                if (diffDays === 0) timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                else if (diffDays === 1) timeStr = 'Ayer';
+                else timeStr = date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+            }
+        }
 
         const div = document.createElement('div');
         div.className = `chat-item ${activeChat === chat.phone ? 'active' : ''}`;
@@ -267,11 +400,30 @@ function renderChatList() {
             ? `<span class="unread-badge">${chat.unreadCount}</span>` 
             : '';
 
+        let avatarStyle = chat.avatarUrl 
+            ? `background-image:url(${chat.avatarUrl}); background-size:cover; background-position:center; text-indent:-9999px; overflow:hidden;` 
+            : `background:${getColorForString(chat.phone)}`;
+        let avatarText = chat.avatarUrl ? '' : (chat.name || chat.phone).charAt(0).toUpperCase();
+
+        let displayName = chat.name;
+        if (!displayName || displayName === chat.phone) {
+            if (chat.username) displayName = chat.username;
+            else if (/^\d+$/.test(chat.phone)) displayName = `+${chat.phone}`;
+            else displayName = chat.phone;
+        }
+
+        let userBadge = '';
+        if (chat.username && chat.name && chat.name !== chat.username) {
+            userBadge = `<span style="font-size:11px; color:#0284c7; font-weight:500; margin-left:4px;">${chat.username}</span>`;
+        } else if (chat.isUsernameChat) {
+            userBadge = `<span style="font-size:10px; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:600;">@user</span>`;
+        }
+
         div.innerHTML = `
-            <div class="avatar" style="background:${getColorForString(chat.phone)}">${(chat.name || chat.phone).charAt(0).toUpperCase()}</div>
+            <div class="avatar" style="${avatarStyle}">${avatarText}</div>
             <div class="chat-info">
                 <div class="chat-row-1">
-                    <span class="chat-name">${chat.name || '+' + chat.phone}</span>
+                    <span class="chat-name" style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${displayName}${userBadge}</span>
                     <div style="display:flex; align-items:center; gap:6px;">
                         <span class="chat-time">${timeStr}</span>
                         ${unreadBadge}
@@ -298,14 +450,46 @@ async function selectChat(chat) {
     document.getElementById('no-chat-selected').style.display = 'none';
     document.getElementById('active-chat').style.display = 'flex';
 
-    document.getElementById('active-name').textContent = chat.name || '+' + chat.phone;
-    const activeAvatarEl = document.getElementById('active-avatar');
-    activeAvatarEl.textContent = (chat.name || chat.phone).charAt(0).toUpperCase();
-    activeAvatarEl.style.background = getColorForString(chat.phone);
+    let headerName = chat.name;
+    if (!headerName || headerName === chat.phone) {
+        if (chat.username) headerName = chat.username;
+        else if (/^\d+$/.test(chat.phone)) headerName = `+${chat.phone}`;
+        else headerName = chat.phone;
+    }
+    document.getElementById('active-name').textContent = headerName;
 
-    document.getElementById('active-status').textContent = chat.assignedToName
+    const activeAvatarEl = document.getElementById('active-avatar');
+    if (chat.avatarUrl) {
+        activeAvatarEl.style.backgroundImage = `url(${chat.avatarUrl})`;
+        activeAvatarEl.style.backgroundSize = 'cover';
+        activeAvatarEl.style.backgroundPosition = 'center';
+        activeAvatarEl.textContent = '';
+    } else {
+        activeAvatarEl.style.backgroundImage = 'none';
+        activeAvatarEl.style.background = getColorForString(chat.phone);
+        activeAvatarEl.textContent = (chat.name || chat.username || chat.phone).charAt(0).toUpperCase();
+    }
+
+    let statusText = chat.assignedToName
         ? `Asignado a: ${chat.assignedToName}`
         : 'WhatsApp';
+    if (chat.username && chat.name && chat.name !== chat.username) {
+        statusText = `${chat.username} • ${statusText}`;
+    } else if (chat.isUsernameChat) {
+        statusText = `Usuario WhatsApp • ${statusText}`;
+    }
+    document.getElementById('active-status').textContent = statusText;
+
+
+    const locBadge = document.getElementById('active-location-badge');
+    if (locBadge) {
+        const mapsUrl = chat.locationUrl || (chat.coordinates ? (chat.coordinates.startsWith('http') ? chat.coordinates : `https://maps.google.com/?q=${encodeURIComponent(chat.coordinates)}`) : (chat.address ? `https://maps.google.com/?q=${encodeURIComponent(chat.address)}` : null));
+        if (mapsUrl) {
+            locBadge.innerHTML = `<a href="${mapsUrl}" target="_blank" class="tag-badge" style="background:#0284c7; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:3px 8px;" title="Ver ubicación en Google Maps"><span class="material-symbols-rounded" style="font-size:14px;">location_on</span> Ubicación</a>`;
+        } else {
+            locBadge.innerHTML = '';
+        }
+    }
 
     renderChatList();
     renderActiveTags(chat.tags);
@@ -352,10 +536,66 @@ async function loadMessages(phone, silent = false) {
         
         messages.forEach(msg => {
             const isSent = msg.direction === 'outbound';
-            const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let time = '';
+            if (msg.timestamp) {
+                const msgDate = new Date(msg.timestamp);
+                if (!isNaN(msgDate.getTime())) {
+                    time = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            }
             const div = document.createElement('div');
             div.className = `message ${isSent ? 'sent' : 'received'}`;
-            div.innerHTML = `<div>${msg.text}</div><div class="message-time">${time}</div>`;
+            
+            let contentHtml = `<div>${msg.text}</div>`;
+            const mediaSrc = msg.mediaUrl || (msg.mediaId ? `/api/media/${msg.mediaId}` : null);
+
+            if (msg.type === 'image' || (mediaSrc && msg.mimeType && msg.mimeType.startsWith('image/'))) {
+                if (mediaSrc) {
+                    contentHtml = `
+                        <div style="margin-bottom:6px;">
+                            <a href="${mediaSrc}" target="_blank" title="Ver tamaño completo">
+                                <img src="${mediaSrc}" alt="Imagen enviada" style="max-width:100%; max-height:280px; border-radius:8px; display:block; object-fit:cover; box-shadow:0 2px 8px rgba(0,0,0,0.15);" />
+                            </a>
+                        </div>
+                        ${msg.caption ? `<div style="font-size:13px; margin-top:4px;">${msg.caption}</div>` : (msg.text && !msg.text.includes('[Mensaje tipo:') ? `<div>${msg.text}</div>` : '')}
+                    `;
+                }
+            } else if (msg.type === 'audio' || (mediaSrc && msg.mimeType && msg.mimeType.startsWith('audio/'))) {
+                if (mediaSrc) {
+                    contentHtml = `
+                        <div style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+                            <audio controls style="max-width:280px; height:42px; outline:none; border-radius:20px;">
+                                <source src="${mediaSrc}" type="${msg.mimeType || 'audio/ogg'}">
+                                Tu navegador no soporta reproducción de audio.
+                            </audio>
+                        </div>
+                    `;
+                }
+            } else if (msg.type === 'video' || (mediaSrc && msg.mimeType && msg.mimeType.startsWith('video/'))) {
+                if (mediaSrc) {
+                    contentHtml = `
+                        <div style="margin-bottom:6px;">
+                            <video controls style="max-width:100%; max-height:280px; border-radius:8px;">
+                                <source src="${mediaSrc}" type="${msg.mimeType || 'video/mp4'}">
+                            </video>
+                        </div>
+                        ${msg.caption ? `<div style="font-size:13px; margin-top:4px;">${msg.caption}</div>` : ''}
+                    `;
+                }
+            } else if (msg.type === 'document' || (mediaSrc && msg.mimeType && (msg.mimeType.includes('pdf') || msg.mimeType.includes('document')))) {
+                if (mediaSrc) {
+                    contentHtml = `
+                        <div style="margin-bottom:6px;">
+                            <a href="${mediaSrc}" target="_blank" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.15); padding:8px 12px; border-radius:6px; text-decoration:none; color:inherit; font-weight:500;">
+                                <span class="material-symbols-rounded">description</span>
+                                <span>${msg.caption || 'Abrir documento'}</span>
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+
+            div.innerHTML = `${contentHtml}<div class="message-time">${time}</div>`;
             container.appendChild(div);
         });
         
@@ -472,6 +712,18 @@ if(document.getElementById('btn-assign-tech')) document.getElementById('btn-assi
     const list = document.getElementById('assign-tech-list');
     list.innerHTML = '';
 
+    // Llenar selector de etiquetas
+    const tagSelect = document.getElementById('assign-tag-select');
+    if (tagSelect) {
+        tagSelect.innerHTML = '<option value="">Ninguna</option>';
+        allLabels.forEach(label => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(label);
+            opt.textContent = label.name;
+            tagSelect.appendChild(opt);
+        });
+    }
+
     if (!allTechs.length) {
         list.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted)">No hay técnicos registrados.<br>Ve a la sección <strong>Staff</strong> para agregar.</div>`;
     } else {
@@ -502,10 +754,16 @@ async function assignToTech(techId, btn) {
     btn.textContent = '...';
     btn.disabled = true;
     try {
+        const tagSelect = document.getElementById('assign-tag-select');
+        let selectedTag = null;
+        if (tagSelect && tagSelect.value) {
+            selectedTag = JSON.parse(tagSelect.value);
+        }
+
         await fetch('/api/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: activeChat, technicianId: techId })
+            body: JSON.stringify({ phone: activeChat, technicianId: techId, tag: selectedTag })
         });
         document.getElementById('assign-modal').style.display = 'none';
         showToast('Técnico asignado y notificado por WhatsApp', 'success');
@@ -657,21 +915,62 @@ async function unassignClient(phone, techId, techName) {
 // ===== SECCIÓN CONTACTOS =====
 function renderContactsTable() {
     const tbody = document.getElementById('contacts-tbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     allChats.forEach(c => {
         const tr = document.createElement('tr');
         const tagsHtml = c.tags?.map(t =>
             `<span class="tag-badge" style="background:${t.color}">${t.name}</span>`
         ).join('') || '–';
+
+        let firstName = c.firstName || '';
+        let lastName = c.lastName || '';
+        if (!firstName && !lastName && c.name) {
+            const parts = c.name.trim().split(' ');
+            firstName = parts[0] || '–';
+            lastName = parts.slice(1).join(' ') || '–';
+        }
+
+        const mapsUrl = c.locationUrl || (c.coordinates ? (c.coordinates.startsWith('http') ? c.coordinates : `https://maps.google.com/?q=${encodeURIComponent(c.coordinates)}`) : (c.address ? `https://maps.google.com/?q=${encodeURIComponent(c.address)}` : null));
+        
+        let locationHtml = '–';
+        if (mapsUrl) {
+            const labelText = c.coordinates || c.address || 'Ver Mapa';
+            const shortText = labelText.length > 20 ? labelText.substring(0, 20) + '...' : labelText;
+            locationHtml = `<a href="${mapsUrl}" target="_blank" class="tag-badge" style="background:#0284c7; color:white; text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:4px 8px; font-size:11px;" title="${labelText}"><span class="material-symbols-rounded" style="font-size:14px;">location_on</span> ${shortText}</a>`;
+        }
+
         tr.innerHTML = `
-            <td><strong>${c.name || '–'}</strong></td>
+            <td><strong>${firstName || '–'}</strong></td>
+            <td><strong>${lastName || '–'}</strong></td>
             <td>+${c.phone}</td>
+            <td>${locationHtml}</td>
             <td><div style="display:flex;gap:4px;flex-wrap:wrap">${tagsHtml}</div></td>
             <td>${c.assignedToName || '–'}</td>
-            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMessage || '–'}</td>
+            <td>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-secondary" onclick="openContactModal('${c.phone}')" style="padding:4px 8px; font-size:12px;" title="Editar contacto">
+                        <span class="material-symbols-rounded" style="font-size:14px;">edit</span>
+                    </button>
+                    <button class="btn-primary" onclick="openChatFromContacts('${c.phone}')" style="padding:4px 8px; font-size:12px;" title="Abrir chat">
+                        <span class="material-symbols-rounded" style="font-size:14px;">chat</span>
+                    </button>
+                </div>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function openChatFromContacts(phone) {
+    const chat = allChats.find(c => c.phone === phone);
+    if (chat) {
+        navItems.forEach(i => i.classList.remove('active'));
+        document.querySelector('[data-section="chats"]')?.classList.add('active');
+        sections.forEach(s => s.classList.remove('active'));
+        document.getElementById('section-chats').classList.add('active');
+        selectChat(chat);
+    }
 }
 
 // ===== SECCIÓN ETIQUETAS =====
